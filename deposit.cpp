@@ -61,5 +61,3 @@ void deposit(transaction trans)
         cout << "[* FAILURE] Deposit Unsuccessful: " << trans._user << " : " << trans._action << "Account Does NOT exist" << " : " << __TIME__ << " : " << __DATE__ << endl;
     }
 }
-
-}

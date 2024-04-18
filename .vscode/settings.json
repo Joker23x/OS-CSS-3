@@ -59,6 +59,7 @@
   "files.associations": {
     "map": "cpp",
     "mutex": "cpp",
-    "string": "cpp"
+    "string": "cpp",
+    "ostream": "cpp"
   }
 }
