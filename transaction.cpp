@@ -12,11 +12,13 @@ Date: 7 APR 2024
 #include "open.cpp"
 #include "transfer.cpp"
 #include "close.cpp"
-#include <vector>
+#include "transaction.h"
+#include <sys/wait.h>
+
 
 map<string, mutex> userMutexes; // ADDED FOR SYNCHRONIZATION
 map<string, vector<transaction> > userTransactions;
-vector<string> logs;
+vector<transactionLog> logs;
 int UserCount = 0;
 
 void readFile(string filePath)
@@ -50,20 +52,23 @@ void readFile(string filePath)
     }
 }
 
-void printUserTransactions(const string& userId)
+void printUserTransactions(const string& userId, int pipeWriteEnd)
 {
-    // cout << "User: " << userId << endl; // DEDBUG BLOCK
+    string logMessage;
 
     for (const auto& t : userTransactions[userId])
     {
-        //cout << " [**] User: " << t._user;
-        //cout << " | Action: " << t._action << ", ";
-        //cout << "Amount: " << t._amount;
+        // Process transaction and build log message
+        logMessage += " [**] User: " + t._user;
+        logMessage += " | Action: " + t._action + ", ";
+        logMessage += "Amount: " + to_string(t._amount);
         if (!t._altUser.empty())
         {
-            //cout << ", Alt User: " << t._altUser;
+            logMessage += ", Alt User: " + t._altUser;
         }
+        logMessage += "\n";
 
+        // Perform transaction actions
         if(t._action == "Open")
         {
             OpenAcct(t);
@@ -90,32 +95,61 @@ void printUserTransactions(const string& userId)
         }
         else
         {
-            cout << "Error thrown at the transaction reading level..." << endl;
+            cerr << "Error thrown at the transaction reading level..." << endl;
         }
-        sleep(1);
     }
+
+    // Write transaction logs to the pipe
+    writeToPipe(pipeWriteEnd, logMessage.c_str(), logMessage.size());
 }
 
-void GetTransactions()
-{
+void GetTransactions() {
     cout << "User Count: " << UserCount << endl;
 
-    for (const auto& pair : userTransactions)
-    {
-        string userId = pair.first;
-
-        if (fork() == 0)  // Create a fork for each user
-        {
-            //cout << "[*] Current Process: " << getpid() << endl;
-            printUserTransactions(userId);  // ## DEBUG LINE
-
-            exit(0);
+    // Create a pipe for each child process
+    vector<int> pipes(UserCount * 2);
+    for (int i = 0; i < UserCount; ++i) {
+        if (pipe(&pipes[i * 2]) == -1) {
+            cerr << "Error creating pipe" << endl;
+            exit(EXIT_FAILURE);
         }
     }
 
+    // Fork a child process for each user
+    int i = 0; // Moved outside the loop
+    for (const auto& pair : userTransactions) {
+        string userId = pair.first;
+        if (fork() == 0) {
+            // Child process
+            close(pipes[2 * i + 1]); // Close the write end of the pipe
+            printUserTransactions(userId, pipes[2 * i]); // Write transaction logs to the pipe
+            exit(0);
+        }
+        ++i; // Increment i for the next iteration
+    }
+
+    // Parent process
+    for (int i = 0; i < UserCount; ++i) {
+        close(pipes[2 * i]); // Close the write end of each pipe
+    }
+
+    // Read transaction logs from each child process
+    char buffer[1024];
+    int bytesRead;
+    for (int i = 0; i < UserCount; ++i) {
+        while ((bytesRead = readFromPipe(pipes[2 * i + 1], buffer, sizeof(buffer))) > 0) {
+            cout << "Received transaction log: " << string(buffer, bytesRead) << endl;
+        }
+        if (bytesRead == -1) {
+            cerr << "Error reading from pipe" << endl;
+        }
+    }
+
+    // Wait for all child processes to finish
     int status;
-    for (int i = 0; i < UserCount; ++i)
+    for (int i = 0; i < UserCount; ++i) {
         wait(&status);
+    }
 }
 
 void GetLogs(string fileName)

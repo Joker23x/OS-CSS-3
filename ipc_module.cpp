@@ -21,3 +21,4 @@ ssize_t readFromPipe(int fd, void *buf, size_t count) {
 void closePipe(int fd) {
     close(fd);
 }
+

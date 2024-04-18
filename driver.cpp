@@ -5,10 +5,11 @@
 #include <vector>
 #include <map>
 #include <unistd.h>
-#include "transaction.cpp"
 #include "transaction.h"
+#include "transaction.cpp"
 #include "globals.h"
-
+#include "ipc_module.h" 
+#include "ipc_module.cpp"
 
 using namespace std;
 
@@ -16,7 +17,7 @@ int main()
 {
     readFile("input.txt");
     GetTransactions();
-    GetLogs("logs.txt");
+    GetLogs("logfile.txt");
 
     return 0;
 }
