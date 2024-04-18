@@ -11,6 +11,7 @@ Date: 7 APR 2024
 #include <iostream>
 #include <sstream>
 #include <map>
+#include "ipc_module.h"
 
 using namespace std;
 

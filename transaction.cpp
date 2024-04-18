@@ -112,8 +112,11 @@ void GetTransactions() {
         if (pipe(&pipes[i * 2]) == -1) {
             cerr << "Error creating pipe" << endl;
             exit(EXIT_FAILURE);
+        }else{
+            cout<<"Pipe Created for user: "<< i<< endl;
         }
-    }
+        }
+    
 
     // Fork a child process for each user
     int i = 0; // Moved outside the loop
@@ -123,6 +126,7 @@ void GetTransactions() {
             // Child process
             close(pipes[2 * i + 1]); // Close the write end of the pipe
             printUserTransactions(userId, pipes[2 * i]); // Write transaction logs to the pipe
+            close(pipes[2 * i]); // Close the read end of the pipe in the child process
             exit(0);
         }
         ++i; // Increment i for the next iteration
@@ -130,20 +134,26 @@ void GetTransactions() {
 
     // Parent process
     for (int i = 0; i < UserCount; ++i) {
-        close(pipes[2 * i]); // Close the write end of each pipe
+        close(pipes[2 * i]); // Close the read end of each pipe
+        cout<<"Pipe being closed for user: "<< i << endl;
     }
 
-    // Read transaction logs from each child process
-    char buffer[1024];
-    int bytesRead;
-    for (int i = 0; i < UserCount; ++i) {
-        while ((bytesRead = readFromPipe(pipes[2 * i + 1], buffer, sizeof(buffer))) > 0) {
-            cout << "Received transaction log: " << string(buffer, bytesRead) << endl;
-        }
-        if (bytesRead == -1) {
-            cerr << "Error reading from pipe" << endl;
-        }
+    
+ // Read transaction logs from each child process
+char buffer[1024];
+int bytesRead;
+for (int i = 0; i < UserCount; ++i) {
+    // Print the descriptor value for debugging
+    cout << "Read end Descriptor for user " << i << ": " << pipes[2 * i + 1] << endl;
+
+    while ((bytesRead = readFromPipe(pipes[2 * i + 1], buffer, sizeof(buffer))) > 0) {
+        cout << "Received transaction log: " << string(buffer, bytesRead) << endl;
     }
+    if (bytesRead == -1) {
+        cerr << "Error reading from pipe" << endl;
+    }
+}
+
 
     // Wait for all child processes to finish
     int status;
@@ -151,6 +161,7 @@ void GetTransactions() {
         wait(&status);
     }
 }
+
 
 void GetLogs(string fileName)
 {
