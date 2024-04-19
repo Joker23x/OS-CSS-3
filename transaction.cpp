@@ -145,7 +145,7 @@ int bytesRead;
 for (int i = 0; i < UserCount; ++i) {
     // Print the descriptor value for debugging
     cout << "Read end Descriptor for user " << i << ": " << pipes[2 * i + 1] << endl;
-
+    cout << "File Descriptor: " << pipes[2*i+1] << endl;
     while ((bytesRead = readFromPipe(pipes[2 * i + 1], buffer, sizeof(buffer))) > 0) {
         cout << "Received transaction log: " << string(buffer, bytesRead) << endl;
     }
